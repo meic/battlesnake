@@ -1,17 +1,9 @@
 import json
 import os
-import random
 import bottle
-from pprint import pprint
 
 from api import ping_response, start_response, move_response, end_response
-
-MOVE_MAP = (
-    ((0, -1), 'up'),
-    ((1, 0), 'right'),
-    ((0, 1), 'down'),
-    ((-1, 0), 'left')
-)
+from brain import Brain
 
 
 @bottle.route('/')
@@ -60,57 +52,8 @@ def start():
 
 @bottle.post('/move')
 def move():
-    data = bottle.request.json
-
-    """
-    TODO: Using the data from the endpoint request object, your
-            snake AI must choose a direction to move in.
-    """
-    pprint(data, indent=4)
-    bad_locs = set()
-    for snake in data['board']['snakes']:
-        for body in snake['body']:
-            bad_locs.add((body['x'], body['y']))
-    heads = []
-    for snake in data['board']['snakes']:
-        if snake['id'] == data['you']['id']:
-            continue
-        heads.append((snake['body'][0]['x'], snake['body'][0]['y']))
-
-    cur_p = data['you']['body'][0]
-    cur_p = (cur_p['x'], cur_p['y'])
-
-    options = []
-    safe_options = []
-    for vec, direction in MOVE_MAP:
-        new_p = (cur_p[0]+vec[0], cur_p[1]+vec[1])
-        if new_p[0] < 0 or new_p[0] >= data['board']['width']:
-            continue
-        if new_p[1] < 0 or new_p[1] >= data['board']['height']:
-            continue
-        if new_p in bad_locs:
-            continue
-        options.append((vec, direction))
-        for head in heads:
-            if abs(head[0]-new_p[0]) + abs(head[1]-new_p[1]) == 1:
-                break
-        else:
-            safe_options.append((vec, direction))
-    print(options)
-    print(safe_options)
-    if safe_options:
-        vec, direction = random.choice(safe_options)
-        print('Moving safe:', direction)
-        return move_response(direction)
-    if options:
-        vec, direction = random.choice(options)
-        print('Moving:', direction)
-        return move_response(direction)
-
-    directions = ['up', 'down', 'left', 'right']
-    direction = random.choice(directions)
-
-    return move_response(direction)
+    brain = Brain(bottle.request.json)
+    return move_response(brain.get_move())
 
 
 @bottle.post('/end')
